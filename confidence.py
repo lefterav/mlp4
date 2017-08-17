@@ -6,6 +6,9 @@ from train import load_labels
 
 def compute_confidence(original_labels, predicted_labels_1, predicted_labels_2, samples=1000):
 
+    print pearsonr(predicted_labels_1, original_labels)
+    print pearsonr(predicted_labels_2, original_labels)
+
     label_triples = zip(predicted_labels_1, predicted_labels_2, original_labels)
 
     # Setting random seed here, to generate same samples for all metrics and directions
@@ -24,13 +27,13 @@ def compute_confidence(original_labels, predicted_labels_1, predicted_labels_2, 
         rho_1 = pearsonr(predicted_1_sample, original_sample)[0]
         rho_2 = pearsonr(predicted_2_sample, original_sample)[0]
         
-        print rho_1, rho_2
+        #print rho_1, rho_2
         
         if rho_1 > rho_2:
             rho_1_better+=1
         elif rho_2 > rho_1:
             rho_2_better+=1
-    print rho_1_better
+    #print rho_1_better
     print "Model 1 is {} better than Model 2".format(1.00*rho_1_better/samples)
     print "Model 2 is {} better than Model 1".format(1.00*rho_2_better/samples)
 

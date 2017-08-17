@@ -5,6 +5,7 @@ import pickle
 
 from train import load_features, load_labels, clamp
 from evaluation_measures import mean_absolute_error, root_mean_squared_error
+import logging as log
 
 def predict(model, features):
     if isinstance(model, list):
@@ -53,7 +54,7 @@ def evaluate(labels_predicted, labels_original, lengths, mode="--clamp_round"):
                 ter_predicted.append(clamp((i+d+s+b)/(l+i-d), 0, 1))
         elif mode=="--original":
             for (i,d,s,b), l in zip(labels_predicted, lengths):
-                ter_predicted.append(clamp((i+d+s+b)/(l+i-d), 0, 1))
+                ter_predicted.append((i+d+s+b)*1.0/(l+i-d))
         
         
         #labels_predicted = [[clamp(round(l, 0)) for l in row] for row in labels_predicted]
@@ -71,10 +72,20 @@ def evaluate(labels_predicted, labels_original, lengths, mode="--clamp_round"):
     pearson_r, pearson_p = pearsonr(ter_predicted, labels_original)
     mae = mean_absolute_error(ter_predicted, labels_original)
     rmse = root_mean_squared_error(ter_predicted, labels_original)
-    return pearson_r, pearson_p, mae, rmse
+    pearson_r_inv, _ = pearsonr(labels_original, ter_predicted)
+    return pearson_r, pearson_p, pearson_r_inv, mae, rmse
 
-def evaluate_testfiles(model, feature_filename, labels_original_filename, translations_filename, mode="--clamp_round"):
-    features = load_features(feature_filename)
+def evaluate_testfiles(model, feature_filename, labels_original_filename, translations_filename, mode="--clamp_round", scaled_test_features=None, scaler=None):
+    if scaled_test_features is not None:
+        features = scaled_test_features
+    else:
+        features = load_features(feature_filename)
+        try:
+            scaler = pickle.load(open("scaler.model"))
+            features = scaler.transform(features)
+            log.info("Sucessfully scaled features")
+        except Exception as e:
+            log.error("Could not scale features {}".format(e))
     labels_predicted = predict(model, features)
     labels_original = load_labels(labels_original_filename)
     translation_lengths = read_translation_lengths(translations_filename) 
@@ -91,7 +102,7 @@ if __name__ == "__main__":
     except:
         mode = "--clamp_round"
     
-    model = pickle.load(open(model_filename))
+    model = pickle.load(open(model_filename)) 
     print model_filename, evaluate_testfiles(model, test_feature_filename, test_labels_original_filename, test_translations_filename, mode)
     
     
